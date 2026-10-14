@@ -1,0 +1,41 @@
+# KiCad
+# KiCad 10 local history (a git repository of its own)
+.history/
+*-backups/
+*.kicad_prl
+fp-info-cache
+*.lck
+\#auto_saved_files#
+_autosave-*
+*-cache.lib
+*.bak
+
+# Generated outputs (regenerate with tools/kicad-check.sh)
+**/hardware/**/output/
+
+# Simulation outputs
+*.raw
+*.log
+
+# Python
+__pycache__/
+.venv/
+
+# Large reference files (keep locally)
+resources/datasheets/*.pdf
+resources/appnotes/*.pdf
+books/*.pdf
+html/
+
+# Generator intermediates (re-created by hardware/gen scripts)
+**/hardware/gen/*.dsn
+**/hardware/gen/*.ses
+**/hardware/gen/*.net
+**/hardware/gen/*.log
+**/hardware/gen/placed.kicad_pcb
+**/hardware/gen/freerouting.json
+
+# STM32CubeIDE build outputs and workspace metadata (the .ioc, .project, .cproject, Core/, Drivers/ are kept)
+**/firmware/**/Debug/
+**/firmware/**/Release/
+.metadata/

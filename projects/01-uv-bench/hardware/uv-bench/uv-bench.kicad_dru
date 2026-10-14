@@ -1,0 +1,21 @@
+(version 1)
+# Custom design rules for the UV bench, Rev B (KiCad: Board Setup -> Custom Rules).
+# Base limits (Board Setup -> Constraints) follow JLCPCB 2-layer standard capabilities.
+
+(rule "JLC: minimum PTH annular ring"
+    (condition "A.Type == 'Pad' && A.Pad_Type == 'Through-hole'")
+    (constraint annular_width (min 0.2mm)))
+
+(rule "JLC: silkscreen text readable"
+    (layer "?.Silkscreen")
+    (constraint text_height (min 0.8mm))
+    (constraint text_thickness (min 0.15mm)))
+
+# The photodiode node (PD, 100 kOhm, microamps) keeps 0.5 mm from the switching signals of the
+# 'Noisy' net class: the 20 kHz PWM and the debug UART (UART_TX/RX, J3 pins 13-14). Their 3.3 V edges
+# couple through track-to-track capacitance. The LED current itself is DC in Rev B, so
+# +5V / LED_K / I_MON need no extra spacing.
+# Tracks only, and not inside IC courtyards (0.65 mm pin pitch).
+(rule "Photodiode away from PWM"
+    (condition "A.Type == 'Track' && B.Type == 'Track' && A.NetClass == 'Analog' && B.NetClass == 'Noisy' && !A.intersectsCourtyard('U*') && !B.intersectsCourtyard('U*')")
+    (constraint clearance (min 0.5mm)))

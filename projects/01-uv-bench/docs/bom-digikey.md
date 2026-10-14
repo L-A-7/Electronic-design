@@ -1,0 +1,105 @@
+# UV bench Rev B: shopping list (DigiKey France)
+
+One distributor for everything except the UV LED star, the aluminium plate and the PCB itself
+(the PCB comes from the board house, e.g. JLCPCB, with the Gerbers from `kicad-check`).
+
+- **Why DigiKey:** I checked it stocks *every* line, including the two brands that are often
+  missing elsewhere: Alpha & Omega (Q1) and JST (J1, cable). Amazon sells no exact part
+  numbers, only look-alikes.
+- **Checked on digikey.fr on 2026-10-14.** Prices are excl. VAT, quantity 1, and will move.
+- **Quantities are for 2 boards plus spares.** A spare MCU, regulator and MOSFET cost ~€2.50
+  together, and one lifted pad or overheated part otherwise stops the build.
+- Upload file: [`bom-digikey.csv`](bom-digikey.csv) (see "How to order" below).
+
+## Board parts
+
+| Ref | Part | Manufacturer part number | Qty | ~€/pc | Why this one |
+|---|---|---|---|---|---|
+| U2 | MCU | STMicroelectronics **STM32C031F6P6** | 3 | 1.56 | The design's MCU, TSSOP-20 |
+| U1 | 3.3 V LDO | Microchip **MCP1700T-3302E/TT** | 3 | 0.45 | "TT" = SOT-23-3, pinout checked in the review |
+| Q1 | N-MOSFET | Alpha & Omega **AO3400A** | 3 | 0.46 | Pick the **Alpha & Omega** line: DigiKey also lists UMW and GOODWORK copies under the same name |
+| D1 | Photodiode | ams OSRAM **SFH 2401** | 3 | 1.45 | Successor of the BPW 34 BS, same pads |
+| D2 | Green LED 0805 | Kingbright **APT2012SGC** | 5 | 0.18 | 2.2 V typ: with R5 = 1 k it runs at ~1 mA, plenty for an indicator |
+| SW1 | Encoder + push | Bourns **PEC09-2220F-S0012** | 2 | 3.69 | See below |
+| R1 | 3.9 Ω 1 W 2512 | Vishay **CRCW25123R90FKEG** | 3 | 0.30 | 1 %, 1 W, in stock. The Yageo in the parts list (RC2512FK-073R9L) was out of stock |
+| C1 C2 C3 C7 | 10 µF 0805 | Samsung **CL21A106KAYNNNE** | 10 | 0.18 | **25 V** X5R: a higher rating loses less capacitance at 5 V (DC bias) |
+| C4 C5 C6 | 100 nF 0805 | Samsung **CL21B104KBCNNNC** | 10 | 0.09 | 50 V X7R, the standard decoupling cap |
+| R2 R5 | 1 kΩ 0805 1 % | Yageo **RC0805FR-071KL** | 10 | 0.03 at 10 | |
+| R3 R4 | 100 kΩ 0805 1 % | Yageo **RC0805FR-07100KL** | 10 | 0.03 at 10 | |
+| J1 | JST PH 4-pin, vertical | JST **B4B-PH-K-S** | 3 | 0.18 | |
+| J3 | Debug header STDC14, 2×7 1.27 mm SMD, keyed | Samtec **FTSH-107-01-L-DV-K** | 3 | 2.16 | Plugs straight into the V3MINIE's cable, see "The debug cable". Not the "-A" version (its alignment pins need holes) |
+
+**The encoder code**, decoded from the Bourns datasheet, `PEC09 - 2 2 20 F - S 0012`:
+- `2`: PC pins, side exit (our horizontal footprint).
+- `2`: 24 detents for 12 pulses, so one click = half a quadrature cycle = 2 counts in
+  CubeMX's "TI1 and TI2" mode. (`1` would be 12 clicks per turn: coarser.)
+- `20`: 20 mm shaft, of which 7 mm is the M7 threaded bushing.
+- `F`: 6 mm flatted ("D") shaft, which takes a standard push-on D knob.
+- `S`: push switch, 0.5 mm stroke.
+- `0012`: 12 pulses per turn.
+
+Two things from the same datasheet:
+- **An M7 nut and washer come with each encoder.** Screw the encoder through a 7 mm hole in
+  the housing wall: the housing then takes the force of turning and pushing, not the 5 solder
+  joints.
+- **Bourns says "hand soldering not recommended":** the plastic body can soften. Solder each
+  leg in 2–3 s and let it cool between legs. Everyone hand-solders these; just don't linger.
+
+## Cable, knob and mechanics
+
+| For | Part | Manufacturer part number | Qty | ~€/pc | Note |
+|---|---|---|---|---|---|
+| J1 cable | PH 4-pin housing | JST **PHR-4** | 4 | 0.09 | |
+| J1 cable | Pre-crimped leads, 300 mm, PH socket at both ends | JST **ASPHSPH24K305** | 8 | 0.44 | No crimping tool needed: push the leads into the housing until they click. Cut one in half for 2 bench leads with one free end |
+| Knob | Ø 11.4 mm (16 mm skirt), 6 mm D, push-on | CLIFF **CL170826BR** | 2 | 1.04 | "K87" type with a marker line |
+| ARM switch | Toggle, SPDT, 5 A | C&K **7101SYCQE** | 1 | 10.83 | Panel mount, in the LED+ wire. Use 2 of its 3 lugs |
+| Standoffs | M3 female–female, **polyamide** (insulating) | Würth **970050365** (5 mm) | 8 | 0.76 | **Length to confirm** in review step 3 (star + LED height, THT legs). Same family: `970`+length in 0.1 mm+`365`, e.g. 970100365 = 10 mm |
+| Screws | M3 × 6 pan head, stainless | APM Hexseal **RM3X6MM 2701** | 16 | 0.42 at 10 | 4 below the plate, 4 on the PCB, per board |
+| Probe | ST-LINK V3MINIE | ST **STLINK-V3MINIE** | 1 | 22.40 | If not bought yet |
+
+**The leads are all black.** Before the first power-up, mark the GND lead (pin 1, the square
+pad on the board) and the +5V lead with a marker or tape. A swapped GND/5V on J1 is the most
+destructive mistake possible on this board.
+
+**Polyamide standoffs** instead of brass: if a THT leg under the board ever touches a standoff,
+nothing happens. Nylon is also lighter and doesn't scratch the plate.
+
+## The debug cable (decided 2026-10-14: B)
+
+**A correction to what I said earlier:** the V3MINIE comes with a **14-pin** (STDC14) cable,
+not a 10-pin one. ST's 14-pin layout is the ARM 10-pin layout with 2 extra pins at each end:
+STDC14 pins 3–12 = ARM pins 1–10. Pins 13–14 carry a UART (the probe's "virtual COM port").
+Two ways to connect it:
+
+| | A: keep the 10-pin header | B: change J3 to the 14-pin STDC14 header |
+|---|---|---|
+| Part | Samtec FTSH-105-01-L-DV, €0.92 (**without** "-K") | Samtec FTSH-107-01-L-DV-K, €2.16 |
+| How it plugs | The 14-pin cable socket goes over the 10 pins, centred, with 2 empty holes at each end. Works only with an *unshrouded* header, hence no "-K" | Straight in, keyed: it can't go in wrong |
+| Risk | No key: the socket can go on shifted by one position or turned round. Needs a silkscreen outline and care each time | None |
+| Board change | None | J3 grows 2.5 mm; re-place and re-route that corner, then `kicad-check` |
+| Bonus | | Pins 13–14 can go to PA2/PA3 (USART2, currently unused): `printf` debugging over the ST-LINK's USB, no extra parts |
+
+**Chosen: B.** The board isn't ordered yet, so the change cost one regeneration. You will
+plug that cable in hundreds of times. A connector that can't go in wrong, plus a free serial
+console for debugging, is worth 2.5 mm. The board now has J3 = STDC14 with USART2 (PA2/PA3) on
+pins 13–14, and the CSV lists `FTSH-107-01-L-DV-K`.
+
+## How to order
+
+1. digikey.fr → **BOM Manager** (or "Upload a list"). Upload `bom-digikey.csv` and map the
+   columns: *Quantity*, *Manufacturer Part Number*, *Customer Reference*.
+2. For each line, check that the match is the **manufacturer** given (Q1: Alpha & Omega) and the
+   packaging is **Cut Tape (CT)**, not *Digi-Reel* (that adds a €5.50 reeling fee per line).
+3. The *Customer Reference* is printed on each bag, e.g. "R3 R4 100k 0805". Keep the bags
+   closed until soldering: 0805 parts all look alike.
+4. **Total: about €60 without the probe, €82 with it** (excl. VAT). DigiKey ships free above a
+   threshold for France; check it at checkout. DigiKey normally ships to the EU duty-paid, so no
+   customs bill on delivery; the checkout page says so.
+
+## Not on this list
+
+- **UV LED star:** as requested.
+- **Aluminium plate:** a hardware store, 3–4 mm.
+- **PCB:** the board house, 5 boards minimum.
+- **Hook-up wire** for the star and the ARM switch: 0.25 mm² (AWG 24). DigiKey sells it in 30 m
+  spools at ~€20; a hardware store or your stock is cheaper.

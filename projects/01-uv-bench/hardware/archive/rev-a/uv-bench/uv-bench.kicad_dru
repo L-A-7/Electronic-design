@@ -1,0 +1,18 @@
+(version 1)
+# Custom design rules for the UV bench (KiCad: Board Setup -> Custom Rules).
+# Base limits (Board Setup -> Constraints) follow JLCPCB 2-layer standard capabilities.
+
+(rule "JLC: minimum PTH annular ring"
+    (condition "A.Type == 'Pad' && A.Pad_Type == 'Through-hole'")
+    (constraint annular_width (min 0.2mm)))
+
+(rule "JLC: silkscreen text readable"
+    (layer "?.Silkscreen")
+    (constraint text_height (min 0.8mm))
+    (constraint text_thickness (min 0.15mm)))
+
+# Analog tracks (photodiode, setpoint, monitors) keep 0.5 mm from power tracks.
+# Tracks only, and not inside IC courtyards: at fine-pitch pins (0.65 mm) neighbouring nets can't be 0.5 mm apart.
+(rule "Analog tracks away from power tracks"
+    (condition "A.Type == 'Track' && B.Type == 'Track' && A.NetClass == 'Analog' && B.NetClass == 'Power' && !A.intersectsCourtyard('U*') && !B.intersectsCourtyard('U*')")
+    (constraint clearance (min 0.5mm)))
