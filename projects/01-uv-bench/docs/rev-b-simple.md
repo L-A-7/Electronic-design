@@ -1,6 +1,9 @@
-# UV bench, Rev B: the simple version
+# UV bench, Rev B/C: the simple version
 
-Status: **approved 2026-10-13, schematic and PCB done in KiCad** (§8). It replaces the Rev A
+Status: **Rev B approved 2026-10-13, schematic and PCB done in KiCad** (§8).
+**Rev C (2026-10-15) = Rev B + an optional remote photodiode** on a 50 cm cable (block 8, J4)
+and its small sensor-head board (`hardware/pd-head/`). Everything else is unchanged. Rev B was
+never fabricated; it stays in the git history (commit 9fdfe87). It replaces the Rev A
 circuit (71 parts, 9 ICs, 4 schematic sheets), which is archived in
 [`hardware/archive/rev-a/`](../hardware/archive/rev-a/).
 
@@ -10,8 +13,8 @@ Generated parts list with nets: [`parts-list.md`](parts-list.md).
 **Goal.** A UV LED whose light output is held constant by a photodiode and a microcontroller.
 An external board sets it over I2C. The board is small, simple, and easy to solder by hand.
 
-**Result:** **21 parts on the board, in 14 part types**, including the connectors. Only
-**3 resistor values** (plus one power resistor) and **2 capacitor values**.
+**Result:** **26 parts on the board, in 16 part types** (Rev B: 21 in 14), including the
+connectors. Only **4 resistor values** (plus one power resistor) and **2 capacitor values**.
 
 ---
 
@@ -118,6 +121,7 @@ MCU loop then held the **light**: two loops in cascade. Rev B has only the light
 | 12 | PA5 | GPIO input, pull-up, EXTI | BTN (knob push) |
 | 13 / 14 | PA6 / PA7 | TIM3_CH1 / CH2, encoder mode, pull-ups | ENC_A / ENC_B (knob rotation) |
 | 15 | PA8 | TIM1_CH1 PWM | PWM (LED drive) |
+| 17 | PA12 (shares the pin with PA10) | ADC input (ADC1_IN12) | ADC_EXT_PD (remote photodiode, Rev C) |
 | 18 / 19 | PA13 / PA14 | SWDIO / SWCLK | Debug header |
 | 20 / 1 | PB6 / PB7 | I2C1 SCL / SDA | J1 |
 | others | | not connected | |
@@ -330,6 +334,72 @@ at the end of the STLINK-V3MINIE's own cable. Its pins:
 - **Layout:** the UART nets are in the `Noisy` net class, like PWM, so DRC keeps them 0.5 mm
   from the photodiode track (they switch only while a message is being sent).
 
+### Block 8: Remote photodiode (J4, R6, R7, R8, C8), Rev C, optional
+
+**What for.** D1 watches the LED through the housing, so it regulates the *lamp*. A second
+photodiode lying **on the target**, under the same ZWB2 filter as the lamp, measures what the
+sample actually receives: the irradiance in mW/cm². The firmware can regulate on it (CTRL bit
+FB_EXT, interface-spec v2.3) or just report it (MEAS_EXT_PD_RAW), so the main board can regulate
+in software.
+
+```
+ sensor head (50 cm twisted pair)      main board
+   K ─────────────── J4.1 ── R6 1k ── +3V3          bias, current limit if the cable shorts
+  SFH 2401
+   A ─────────────── J4.2 ──┬── R7 1k ── PA12 (ADC1_IN12)
+                            ├── R8 10k ── GND       load: V = I × 10 k
+                            └── C8 100n ── GND      τ = 1 ms, ESD charge sink
+```
+
+**Is there enough signal without an amplifier? Yes, by far.** A photodiode is a current
+source: I = E × A × R_λ.
+
+- A = 7 mm² = 0.07 cm², R_λ ≈ 0.1 A/W at 365 nm, the filter passes ~80 %:
+  **≈ 5.6 µA per mW/cm²**.
+- The lamp (~0.3–0.4 W of UV) gives roughly 1–50 mW/cm² on a target a few cm away:
+  **5–300 µA**.
+- With R8 = 10 k that is 0.06–2.8 V, i.e. 70 to 3500 ADC counts. An amplifier is for nW–µW
+  signals (pA–nA, MΩ–GΩ loads); a sensor sitting *in* the beam has the opposite problem:
+  don't saturate. R8 = 100 k (like R4) would saturate above ~5 mW/cm².
+- **R8 is a first guess.** Measure, then re-stuff it if the reading saturates (smaller R) or
+  stays below ~200 counts (larger R). Keep the voltage under ~2.5 V so the diode stays reverse
+  biased (3.3 V minus the drop on R6).
+
+**Why the load is on the main board, not on the head.** The cable then carries a *current*.
+Noise picked up along the cable or the board tracks is injected into R8 ∥ C8, which is only
+~80 Ω at 20 kHz: a 0.1 pF stray coupling from a 3.3 V edge moves it by 3.3 V × 0.1 pF / 100 nF ≈
+3 µV. Twist the two wires anyway (it cancels mains pickup), and the firmware averages over
+20 ms (one 50 Hz period).
+
+**Protection, since the cable gets plugged, unplugged and maybe pinched:**
+- **R6 1 k** in the bias: a short in the cable draws 3.3 mA instead of pulling down the MCU
+  supply. It costs 0.3 V at 300 µA: harmless.
+- **R7 1 k + C8:** an ESD discharge on the connector lands in C8, and R7 limits the current into
+  the MCU pin.
+- **Unplugged:** R8 pulls the input to 0 V. The firmware sees "no light" and the safety rule
+  "remote feedback lost" (interface-spec §5) turns the LED off if it was regulating on it.
+
+**Why PA12 (pin 17) and not PA11 (pin 16).** Both are free ADC inputs. Pin 16 sits right next to
+pin 15, the PWM; pin 17 sits next to SWDIO, which is quiet except while debugging. In CubeMX,
+select **PA12**: it shares pin 17 with PA10 and CubeMX sets the remap bit.
+
+**The filter passes infrared.** ZWB2 (Wood's) glass blocks the visible but transmits near-IR
+above ~700 nm, where silicon is most sensitive. Sunlight and incandescent or halogen lamps add an
+offset; LED and fluorescent room light add little. The dark reading taken at each switch-on is
+subtracted, and a dim enclosure removes the rest.
+
+**The sensor head** (`hardware/pd-head/`, 12 × 21 mm, 2-layer, its own Gerbers):
+- An SFH 2401 (the same part as D1), sensitive face up, and two wire pads with strain-relief
+  holes: thread each wire through the big hole first, then solder it in the small one.
+- Wire pad **K** (square pad, "K" on the silkscreen; it joins the diode's large pad, the cathode) goes to **J4 pin 1**, pad **A** to
+  **J4 pin 2**. The back silkscreen repeats it.
+- Put the ZWB2 filter directly over the diode (a drop of clear glue at the edges, or a printed
+  cap). The light reaching the diode through the filter is what the calibration measures, so
+  the filter must not move relative to the diode.
+- Regulating on the head holds *the head's* reading constant. If the head moves or is shaded,
+  the LED follows it, up to SETPOINT_CURRENT. Keep the head beside the sample, at the same
+  height, and set SETPOINT_CURRENT to a sensible limit.
+
 ### Mechanical assembly: how the LED fits in the hole
 
 The LED is **not soldered to this board**. It comes on its own 20 mm aluminium disc (the
@@ -401,6 +471,7 @@ plate on 4 standoffs**, and the star sits inside the Ø 22 mm hole, with 1 mm of
 | J1 | Connector | JST-PH 4-pin, top entry (B4B-PH-K-S) | THT | 1 |
 | J2 | Wire pads | LED+ / LED− | 2 pads | 1 |
 | J3 | Debug header | STDC14 2×7 1.27 mm, keyed: Samtec FTSH-107-01-L-DV-K | SMD | 1 |
+| J4 | Connector, remote photodiode (Rev C) | JST-PH 2-pin, top entry (B2B-PH-K-S) | THT | 1 |
 | U1 | LDO 3.3 V | MCP1700T-3302E/TT | SOT-23 | 1 |
 | U2 | MCU | STM32C031F6P6 | TSSOP-20 | 1 |
 | Q1 | N-MOSFET, logic level | AO3400A | SOT-23 | 1 |
@@ -408,16 +479,19 @@ plate on 4 standoffs**, and the star sits inside the Ø 22 mm hole, with 1 mm of
 | D2 | LED, green (mode) | any 0805 green | 0805 | 1 |
 | SW1 | Rotary encoder with push switch | Bourns PEC09-2xxxF-Sxxxx (pick the shaft length) | THT | 1 |
 | R1 | Resistor, power | **3.9 Ω**, 1 W | 2512 | 1 |
-| R2, R5 | Resistor | **1 kΩ** | 0805 | 2 |
+| R2, R5, R6, R7 | Resistor | **1 kΩ** | 0805 | 4 |
+| R8 | Resistor (remote PD load; adjust after measuring) | **10 kΩ** | 0805 | 1 |
 | R3, R4 | Resistor | **100 kΩ** | 0805 | 2 |
 | C1, C2, C3, C7 | Capacitor, X5R/X7R ≥ 10 V | **10 µF** | 0805 | 4 |
-| C4, C5, C6 | Capacitor, X7R | **100 nF** | 0805 | 3 |
+| C4, C5, C6, C8 | Capacitor, X7R | **100 nF** | 0805 | 4 |
 | *off board* | UV LED star, ARM toggle switch, wires | | | |
 
 **Totals:**
 
-- **21 parts on the board, in 14 types.**
-- **Values to buy:** 3 resistors (3.9 Ω, 1 kΩ, 100 kΩ) and 2 capacitors (100 nF, 10 µF).
+- **26 parts on the board, in 16 types** (Rev B: 21 in 14). Without block 8: leave J4, R6–R8,
+  C8 empty; the rest works unchanged.
+- **Values to buy:** 4 resistors (3.9 Ω, 1 kΩ, 10 kΩ, 100 kΩ) and 2 capacitors (100 nF, 10 µF).
+- **Sensor head:** 1 SFH 2401 on its own small PCB, plus the cable (block 8).
 - **Order spares** of the 0805 parts, ~10 of each: they jump off the tweezers.
 
 **Soldering order** (lowest parts first, the hardest one while you're fresh):
@@ -426,7 +500,7 @@ plate on 4 standoffs**, and the star sits inside the Ø 22 mm hole, with 1 mm of
 2. U1, Q1.
 3. The passives.
 4. D1, D2.
-5. J3, J1, SW1.
+5. J3, J1, J4, SW1.
 
 **Board size:** **58 × 32 mm**, the Ø 22 mm cut-out included (Rev A: 70 × 55 mm).
 
@@ -577,6 +651,7 @@ driver and the photodiode on the right.
 | SW1 knob | Right edge, shaft pointing outwards | Reachable through the housing side; far from the LED's reflector |
 | D2 mode LED | Just below the knob | You see the mode where your finger is |
 | J1 JST-PH | Top edge | The cable leaves the board upwards, away from the knob |
+| J4 JST-PH 2 (Rev C) | Top edge, between the cut-out and J3 | The only free edge spot; on the analog side of the board, away from R1 and Q1. R8/C8 sit beside it, R7 next to the MCU |
 | U1 LDO | Just below J1 | Short path from the 5 V input |
 | Small parts | Auto-placed, as close as possible to the pin they serve | Decoupling C4 at VDD, filter C6 at the ADC pin, C7/R3 at the MOSFET gate |
 

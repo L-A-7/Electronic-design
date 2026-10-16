@@ -1,4 +1,4 @@
-# UV bench ↔ main board interface specification (v2.2)
+# UV bench ↔ main board interface specification (v2.3)
 
 This file is the contract between the UV bench board (project 01, which has its own MCU) and
 whatever controls it: the main board (project 03), a Nucleo, or a PC through the UART
@@ -88,18 +88,20 @@ Multi-byte values are latched on the first byte read, so lo/hi always belong tog
 | 0x00 | WHO_AM_I | R | u8 | Fixed 0xA5 |
 | 0x01 | FW_VERSION | R | u8 | major << 4 \| minor |
 | 0x02 | STATUS | R | u8 | bit0 LED_ON, bit1 LOCKED (power within ±1 % of target), bit2 SATURATED (target unreachable), bit3 ARM_OFF (UV ARM switch off: drive applied but I_MON ≈ 0; LED disabled in hardware), bit4 MANUAL (front-panel knob in control: set/cleared by a short push on the knob, green LED off; I2C setpoint writes are stored but not applied until the board is back in I2C mode. v1.x: OVERTEMP), bit5 FAULT (latched), bit6 CAL_VALID, bit7 AMBIENT_HIGH |
-| 0x03 | CTRL | R/W | u8 | bit0 ENABLE, bit1 MODE (0 = regulated current, loop on I_MON; 1 = regulated optical power, loop on the photodiode), bit6 SAVE_CONFIG (write 1 → store config in flash), bit7 CLEAR_FAULT (write 1) |
-| 0x04 | SETPOINT_POWER | R/W | u16 | Regulated modes: 0.1 mW units if CAL_VALID, else 0.01 % of full scale |
+| 0x03 | CTRL | R/W | u8 | bit0 ENABLE, bit1 MODE (0 = regulated current, loop on I_MON; 1 = regulated optical power, loop on the photodiode), bit2 FB_EXT (v2.3, Rev C: in MODE 1, regulate on the **remote** photodiode on J4 instead of D1), bit6 SAVE_CONFIG (write 1 → store config in flash), bit7 CLEAR_FAULT (write 1) |
+| 0x04 | SETPOINT_POWER | R/W | u16 | Regulated modes: 0.1 mW units if CAL_VALID, else 0.01 % of full scale. With FB_EXT: **irradiance at the target, 1 µW/cm² units** (0–65.5 mW/cm²) if CAL_VALID, else 0.01 % of full scale |
 | 0x06 | SETPOINT_CURRENT | R/W | u16 | Current mode: 0.1 mA units (0–3300). In power mode: current *limit* |
 | 0x0A | RAMP_RATE | R/W | u16 | Max setpoint change, %/s (soft start; 0 = instant) |
 | 0x0C | WATCHDOG | R/W | u8 | Seconds without any I2C write before the LED turns off (0 = disabled) |
-| 0x10 | MEAS_POWER | R | u16 | Same units as SETPOINT_POWER (photodiode on − off, calibrated) |
+| 0x10 | MEAS_POWER | R | u16 | Same units as SETPOINT_POWER (photodiode on − off, calibrated; the remote one with FB_EXT) |
 | 0x12 | MEAS_CURRENT | R | u16 | 0.1 mA |
 | 0x14–0x19 | *reserved* | | | v1.x: MEAS_T_LED, MEAS_V_HEADROOM, MEAS_V_IN (no such hardware in Rev B). Read as 0 |
 | 0x1A | MEAS_PD_RAW | R | u16 | ADC counts (minus the dark reading taken at switch-on), for calibration |
 | 0x1C | MEAS_AMBIENT | R | u16 | ADC counts, LED off, measured at each switch-on |
+| 0x1E | MEAS_EXT_PD_RAW | R | u16 | v2.3, Rev C: remote photodiode (J4), ADC counts minus its dark reading at switch-on. Reads ≈ 0 when nothing is plugged in (R8 pulls the input low). Available in every mode, so the main board can watch the target and regulate in software if it prefers |
 | 0x20 | CAL_GAIN | R/W | u32 | µW per 1000 raw counts. Written by the calibration procedure |
-| 0x24 | CAL_SAVE | W | u8 | Write 0xC5 to store CAL_GAIN in flash (sets CAL_VALID) |
+| 0x24 | CAL_SAVE | W | u8 | Write 0xC5 to store CAL_GAIN and CAL_GAIN_EXT in flash (sets CAL_VALID) |
+| 0x28 | CAL_GAIN_EXT | R/W | u32 | v2.3: µW/cm² per 1000 raw counts of the remote photodiode. CAL_VALID refers to the gain of the active feedback source |
 | 0x30 | *reserved* | | | v1.x: T_LIMIT (no temperature sensor in Rev B) |
 
 Minimal usage from the main board:
@@ -115,6 +117,7 @@ Minimal usage from the main board:
 - Watchdog expiry (if enabled): LED off, ENABLE cleared.
 - At power-up the LED is **always off**. Setpoints come back from flash, ENABLE never does.
 - Current is never above SETPOINT_CURRENT, nor above the hardware maximum ((5 V − V_f) / 3.9 Ω ≈ 330 mA, set by R1).
+- **Remote feedback lost** (v2.3, FB_EXT set): if the remote reading stays below 2 % of the setpoint for 0.5 s while the LED current is above 10 % of SETPOINT_CURRENT, the sensor was unplugged, fell off or is shaded. LED off, FAULT latched. Without this rule the loop would drive the LED to SETPOINT_CURRENT trying to "find" the light. Set SETPOINT_CURRENT to a sensible limit when using FB_EXT.
 
 ## 6. UART console
 
@@ -132,4 +135,5 @@ protocol of [`host-protocol.md`](host-protocol.md) is the model. Default: 115200
 - v1.3 (2026-10-12): lid switch replaced by a manual UV ARM switch. STATUS bit3 LID_OPEN → ARM_OFF, not latched as FAULT; ENABLE must be rewritten after re-arming.
 - v2.0 (2026-10-13): Rev B board. FTDI/UART header, address jumper (0x2B), DNP pull-ups, temperature and voltage monitors removed (registers 0x14–0x19 and 0x30 reserved, STATUS bit4 reserved). MODE 0 is now regulated current (firmware loop on I_MON). ARM_OFF detected from I_MON. LED current is DC: the 220 µF + LC requirement is dropped.
 - v2.1 (2026-10-13): front-panel knob (rotary encoder + push) and green mode LED. STATUS bit4 = MANUAL. The knob and the I2C board share one setpoint, so switching modes doesn't make the light jump. Power-up mode: I2C.
-- **v2.2 (2026-10-14): debug header J3 is now the 14-pin STDC14 (keyed, plugs straight into the STLINK-V3MINIE cable) instead of the 2×5 Cortex 10-pin. Its pins 13–14 bring USART2 (PA2/PA3) to the probe's virtual COM port, for debug messages. The I2C interface and the register map are unchanged.**
+- v2.2 (2026-10-14): debug header J3 is now the 14-pin STDC14 (keyed, plugs straight into the STLINK-V3MINIE cable) instead of the 2×5 Cortex 10-pin. Its pins 13–14 bring USART2 (PA2/PA3) to the probe's virtual COM port, for debug messages. The I2C interface and the register map are unchanged.
+- **v2.3 (2026-10-15): Rev C board with an optional remote photodiode on J4 (JST-PH 2), lying on the target. New: MEAS_EXT_PD_RAW (0x1E), CAL_GAIN_EXT (0x28), CTRL bit2 FB_EXT (regulate on the remote sensor, setpoint in µW/cm²), and the "remote feedback lost" safety rule. Existing registers keep their addresses and meaning; with FB_EXT = 0 a v2.2 controller sees no difference.**

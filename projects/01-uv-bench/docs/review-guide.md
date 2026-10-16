@@ -34,12 +34,14 @@ wrong. Only you, with the datasheet, can catch that.
 
 | Part | Pad on the board → net | What the datasheet must say | Your check |
 |---|---|---|---|
-| U1 MCP1700T-3302E/TT (SOT-23) | 1 → GND, 2 → +3V3 (out), 3 → +5V (in) | Pin 1 GND, pin 2 V_OUT, pin 3 V_IN for the "TT" (SOT-23-3) package. Note: other LDOs in SOT-23 often use another order | ✔ 2026-10-13: datasheet (top view) 1 GND, 2 V_OUT, 3 V_IN |
+| U1 MCP1700T-3302E/TT (SOT-23) | 1 → GND, 2 → +3V3 (out), 3 → +5V (in) | Pin 1 GND, pin 2 V_OUT, pin 3 V_IN for the "TT" (SOT-23-3) package. Note: other LDOs in SOT-23 often use another order | ✔ 2026-10-13: datasheet (top view) 1 GND, 2 V_OUT, 3 V_IN. **To redo:** the BOM now has the MCP1702T-3302E/CB (MCP1700 out of stock, 2026-10-14): check its SOT-23A pin table says the same |
 | Q1 AO3400A (SOT-23) | 1 → GATE, 2 → I_MON (source), 3 → LED_K (drain) | 1 = G, 2 = S, 3 = D | ✔ 2026-10-13: datasheet (top view) 1 G, 2 S, 3 D |
 | D1 SFH 2401 | pad 1 (the larger pad, nearer the bottom edge) → +3V3 = **cathode**; pad 2 → PD = anode | Find the cathode mark on the drawing (a notch, a bevelled corner, or a longer lead), then check that it is the lead landing on the *larger* pad of the KiCad footprint. Open the footprint (PCB editor → select D1 → E → Edit footprint) to see the pad shapes | ✔ 2026-10-13: footprint pad 1 (large) = K; SFH 2401 datasheet: large pad = K, same solder pads as the BPW 34 S |
 | D2 green LED 0805 | pad 1 → GND = **cathode**, pad 2 → anode | The cathode mark on the part (green line, or a "T" on the underside) goes on pad 1. The silkscreen shows a mark on that side | |
 | SW1 PEC09 encoder | A, C, B in a row on the right (C in the middle → GND); S1 → BTN, S2 → GND on the left | Drawing "PC board layout": A–C–B on one side, the 2 switch pins on the other. Also check which way the shaft points (here: to the right, off the board edge) | ✔ 2026-10-13: A–C–B order, C in the middle, switch row opposite; no mounting tabs (footprint has none either) |
 | J1 JST-PH 4 | 1 → GND (square pad, left), 2 → +5V, 3 → SDA, 4 → SCL | Same numbering as the main board's connector, and the cable must be "straight": pin 1 to pin 1 | |
+| J4 JST-PH 2 (Rev C) | 1 → EXT_PD_K (square pad, left; +3V3 through R6), 2 → EXT_PD | Pin 1 of the cable housing PHR-2 goes to the head's **K** pad (cathode). Swapped, the diode is forward biased through R6 + R8: ~0.24 mA, no damage, but the input sits at a constant ~2.4 V whatever the light | |
+| Sensor head (`hardware/pd-head/`) | D1 pad 1 (large) → wire pad K; pad 2 → wire pad A | Same footprint and part as D1 on the main board (already checked): large pad = cathode | |
 
 **What happens if it's wrong:**
 
@@ -181,6 +183,7 @@ the left column (*Categories*).
 |---|---|---|---|
 | PA0 (7) | ADC1_IN0 | Analog → ADC1: tick IN0 and IN1 | |
 | PA1 (8) | ADC1_IN1 | ADC1 → Parameter Settings: Resolution 12 bits, *Scan Conversion Mode* (sequencer) with 2 ranks: rank 1 = IN0 (PD), rank 2 = IN1 (I_MON) | |
+| PA12 (17) | ADC1_IN12 | Rev C, remote photodiode. Pin 17 is shared with PA10: pick **PA12** in the pin's list. ADC1: tick IN12 too and add **rank 3 = IN12** | |
 | PA2 (9), PA3 (10) | USART2_TX, USART2_RX | Connectivity → USART2: Mode **Asynchronous**, 115200 baud, 8N1. Check that TX lands on **PA2**: CubeMX can also offer PA14, which is SWCLK. Added 2026-10-14 with the 14-pin debug header | |
 | PA4 (11) | GPIO_Output | System Core → GPIO → PA4: push-pull, no pull, *Output level* **High** (power-up mode = I2C = green LED on). User label `MODE_LED` | |
 | PA5 (12) | GPIO_EXTI5 | GPIO → PA5: *External interrupt, falling edge*, **Pull-up**. Label `BTN`. System Core → NVIC: enable *EXTI line 4 to 15* | |
@@ -210,8 +213,8 @@ Why these numbers:
 > green in the window, but the file on disk (and the generated `main.c`) still has:
 > HSI divider /4 (12 MHz instead of 48), TIM3 encoder mode TI1 (not TI1 and TI2), PA5 rising
 > edge without pull-up, PA4 starting low, PA6/PA7 without pull-up (TIM3 → GPIO Settings),
-> NVIC: EXTI 4–15 and I2C1 not enabled. Plus a seventh, added since: USART2 on PA2/PA3 (row
-> above). Fix in CubeIDE, **Ctrl+S → "generate code?" Yes**,
+> NVIC: EXTI 4–15 and I2C1 not enabled. Plus two added since: USART2 on PA2/PA3 and
+> ADC1_IN12 on PA12 as rank 3 (rows above). Fix in CubeIDE, **Ctrl+S → "generate code?" Yes**,
 > then check that `Core/Src/main.c` has a new date.
 
 ### 5.4 Clock
@@ -221,7 +224,7 @@ If a box turns red, the value isn't allowed: tell me which one.
 
 ### 5.5 Result
 
-1. **Pinout view:** the 14 pins we use are green. Nothing orange (half-configured) or red
+1. **Pinout view:** the 15 pins we use are green. Nothing orange (half-configured) or red
    (conflict). Unused pins stay grey.
 2. **Left column:** no warning triangle next to ADC1, TIM1, TIM3, I2C1, USART2, SYS.
 3. **Project → Generate Code** (or save the `.ioc`, which asks). It must finish without errors.

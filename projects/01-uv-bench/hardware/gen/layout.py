@@ -11,7 +11,7 @@ Rotation is counter-clockwise (KiCad convention): a resistor at 90 has pin 1 on 
 
 One A4 sheet, blocks numbered as in docs/rev-b-simple.md:
   1 power input | 2 regulator | 6 debug | 3 MCU | 4 LED driver (top right) | 5 photodiode (below it)
-  7 user controls (below the MCU)
+  7 user controls (below the MCU) | 8 remote photodiode (bottom left)
 Rev A's layout (4 sheets) is in ../archive/rev-a/gen/layout.py.
 """
 
@@ -49,6 +49,12 @@ AT[SH] = {
     "SW1": ("C", (60, 53), 90, None),
     "R5": ("1", (71, 50), 90, None),
     "D2": ("2", (78, 50), 0, "y"),         # mirrored: anode left, cathode right (rot 180 would turn its text upside down)
+    # 8 remote photodiode: J4 pins face right (pin 1 = cathode/bias at the bottom), R8/C8 at the node, R7 to the ADC
+    "J4": ("1", (16, 54), 180, None),
+    "R6": ("1", (21, 54), 90, None),
+    "R8": ("1", (29, 50), 0, None),
+    "C8": ("1", (32, 50), 0, None),
+    "R7": ("1", (34, 50), 90, None),
 }
 WIRES[SH] = [
     ("GND", ["J1.1", (17, 25), (17, 28)]),
@@ -72,13 +78,18 @@ WIRES[SH] = [
     ("MODE_LED", [(69, 50), "R5.1"]),
     ("D2_A", ["R5.2", "D2.2"]),
     ("GND", ["D2.1", (84, 50), (84, 51)]),
+    ("EXT_PD_K", ["J4.1", "R6.1"]),
+    ("+3V3", ["R6.2", (25, 54)]),
+    ("EXT_PD", ["J4.2", (17, 53), (17, 50), "R8.1", "C8.1", "R7.1"]),
+    ("ADC_EXT_PD", ["R7.2", (39, 50)]),
 ]
 POWER[SH] = [("GND", (17, 28), "down"), ("+5V", (20, 24), "up"), ("+3V3", (41, 24), "up"),
              ("+3V3", (70, 18), "up"), ("+5V", (107, 27), "up"), ("GND", (47, 39), "down"),
-             ("GND", (64, 46), "down"), ("GND", (84, 51), "down")]
+             ("GND", (64, 46), "down"), ("GND", (84, 51), "down"),
+             ("+3V3", (25, 54), "up")]
 LABELS[SH] = [("PWM", (85, 34), "left"), ("I_MON", (107, 37), "right"), ("PD", (97, 51), "right"),
               ("ENC_A", (55, 56), "left"), ("ENC_B", (65, 56), "right"), ("BTN", (55, 45), "left"),
-              ("MODE_LED", (69, 50), "left")]
+              ("MODE_LED", (69, 50), "left"), ("ADC_EXT_PD", (39, 50), "right")]
 TEXTS[SH] = [
     ("1  POWER INPUT", (13, 19)),
     ("2  3.3 V REGULATOR", (28, 19)),
@@ -87,4 +98,5 @@ TEXTS[SH] = [
     ("4  LED DRIVER", (85, 24)),
     ("5  PHOTODIODE SENSOR", (85, 42)),
     ("7  USER CONTROLS (knob + push, mode LED)", (53, 42)),
+    ("8  REMOTE PHOTODIODE (optional, 50 cm cable)", (13, 46)),
 ]

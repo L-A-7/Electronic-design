@@ -18,6 +18,9 @@ V = lambda x, y: pcbnew.VECTOR2I(mm(x), mm(y))
 X0, Y0, W, H = 100.0, 100.0, 58.0, 32.0
 HX, HY, HR = 113.0, 116.0, 11.0            # cut-out centre / radius (Ø22 for the Ø20 star)
 HOLE_INSET = 3.5
+CORNER_R = 3.5     # rounded corners (set by hand in KiCad 2026-10-15): = HOLE_INSET, so each corner arc is
+                   # centred on its mounting hole. The GND pours keep a rectangular outline; their fill is
+                   # clipped to the rounded edge
 HOLES = [(X0 + HOLE_INSET, Y0 + HOLE_INSET), (X0 + W - HOLE_INSET, Y0 + HOLE_INSET),
          (X0 + HOLE_INSET, Y0 + H - HOLE_INSET), (X0 + W - HOLE_INSET, Y0 + H - HOLE_INSET)]
 POWER = {"GND", "+3V3", "+5V"}
@@ -28,6 +31,7 @@ FIXED = {  # ref: (courtyard centre x, y, rotation)
     "D2": (153.5, 123.3, 0),     # mode LED just below the knob, visible next to it
     "J1": (144.6, 103.3, 0),     # JST-PH on the top edge, cable leaves upwards
     "U1": (139.4, 108.4, 0),     # LDO right below the connector
+    "J4": (122.2, 103.1, 0),     # remote photodiode JST-PH 2, top edge between the cut-out and J3 (analog side)
     "J3": (130.5, 105.57, 0),    # STDC14 debug header on the top edge (14 pins: 1.27 mm lower than the 10-pin)
     "U2": (137.5, 115.5, 0),     # MCU in the middle
     "D1": (127.4, 116.0, 90),    # photodiode at the cut-out edge, 14.4 mm from the LED axis
@@ -40,6 +44,7 @@ HUG = {  # local parts: ref -> (ref, pad) to sit next to
     "C1": ("J1", "2"), "C2": ("U1", "3"), "C3": ("U1", "2"), "R5": ("D2", "2"),
     "C6": ("U2", "7"), "R4": ("D1", "2"),       # PD node: filter cap at the ADC pin, load at the diode
     "R3": ("Q1", "1"), "C7": ("Q1", "1"), "R2": ("U2", "15"),
+    "C8": ("J4", "2"), "R8": ("J4", "2"), "R6": ("J4", "1"), "R7": ("U2", "17"),   # remote PD: C8 at the connector
 }
 
 
@@ -47,11 +52,12 @@ def outline(board):
     def shape(kind, layer, w=0.1):
         s = pcbnew.PCB_SHAPE(board); s.SetShape(kind); s.SetLayer(layer); s.SetWidth(mm(w)); board.Add(s); return s
     r = shape(pcbnew.SHAPE_T_RECT, pcbnew.Edge_Cuts); r.SetStart(V(X0, Y0)); r.SetEnd(V(X0 + W, Y0 + H))
+    r.SetCornerRadius(mm(CORNER_R))
     c = shape(pcbnew.SHAPE_T_CIRCLE, pcbnew.Edge_Cuts); c.SetCenter(V(HX, HY)); c.SetEnd(V(HX + HR, HY))
     c2 = shape(pcbnew.SHAPE_T_CIRCLE, pcbnew.Dwgs_User); c2.SetCenter(V(HX, HY)); c2.SetEnd(V(HX + 10, HY))
     for txt, x, y, layer, size in (("LED star Ø20 on the Al plate", HX, HY - 2, pcbnew.Dwgs_User, 1.0),
                                    ("reflector side port faces D1 ->", HX, HY + 2, pcbnew.Dwgs_User, 1.0),
-                                   ("UV BENCH rev B", 116.0, 101.9, pcbnew.F_SilkS, 0.8)):
+                                   ("UV BENCH rev C", 148.6, 131.0, pcbnew.F_SilkS, 0.8)):
         t = pcbnew.PCB_TEXT(board); t.SetText(txt); t.SetPosition(V(x, y)); t.SetLayer(layer)
         t.SetTextSize(V(size, size)); t.SetTextThickness(mm(0.15)); board.Add(t)
     holes = [fp for fp in board.GetFootprints() if fp.IsBoardOnly()]

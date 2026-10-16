@@ -18,15 +18,17 @@ One distributor for everything except the UV LED star, the aluminium plate and t
 | U2 | MCU | STMicroelectronics **STM32C031F6P6** | 3 | 1.56 | The design's MCU, TSSOP-20 |
 | U1 | 3.3 V LDO | Microchip **MCP1702T-3302E/CB** | 3 | ~0.5 | The MCP1700T-3302E/TT was out of stock (2026-10-14, 3 expected on 2026-10-26). The MCP1702 is its big brother: same pinout (1 GND, 2 V_OUT, 3 V_IN), same 1 µF+ ceramic-cap stability, 13.2 V max input instead of 6 V. **Check the pinout table in its datasheet before soldering** (SOT-23A = "CB"). Waiting for the MCP1700 is the other option |
 | Q1 | N-MOSFET | Alpha & Omega **AO3400A** | 3 | 0.46 | Pick the **Alpha & Omega** line: DigiKey also lists UMW and GOODWORK copies under the same name |
-| D1 | Photodiode | ams OSRAM **SFH 2401** | 3 | 1.45 | Successor of the BPW 34 BS, same pads |
+| D1 + head | Photodiode | ams OSRAM **SFH 2401** | 4 | 1.45 | Successor of the BPW 34 BS, same pads. One on the board, one on the remote sensor head (Rev C), two spares |
 | D2 | Green LED 0805 | Kingbright **APT2012SGC** | 5 | 0.18 | 2.2 V typ: with R5 = 1 k it runs at ~1 mA, plenty for an indicator |
 | SW1 | Encoder + push | Bourns **PEC09-2220F-S0012** | 2 | 3.69 | See below |
 | R1 | 3.9 Ω 1 W 2512 | Vishay **CRCW25123R90FKEG** | 3 | 0.30 | 1 %, 1 W, in stock. The Yageo in the parts list (RC2512FK-073R9L) was out of stock |
 | C1 C2 C3 C7 | 10 µF 0805 | Murata **GRM21BR61E106KA73L** | 10 | ~0.2 | **25 V** X5R: a higher rating loses less capacitance at 5 V (DC bias). Replaces the Samsung CL21A106KAYNNNE (only 2 left, 2026-10-14). Equivalents if this one runs out: TDK C2012X5R1E106K125AB, Taiyo Yuden TMK212BBJ106KG-T. Any 10 µF / 25 V / X5R or X7R / 0805 fits the footprint |
-| C4 C5 C6 | 100 nF 0805 | Samsung **CL21B104KBCNNNC** | 10 | 0.09 | 50 V X7R, the standard decoupling cap |
-| R2 R5 | 1 kΩ 0805 1 % | Yageo **RC0805FR-071KL** | 10 | 0.03 at 10 | |
+| C4 C5 C6 C8 | 100 nF 0805 | Samsung **CL21B104KBCNNNC** | 10 | 0.09 | 50 V X7R, the standard decoupling cap |
+| R2 R5 R6 R7 | 1 kΩ 0805 1 % | Yageo **RC0805FR-071KL** | 10 | 0.03 at 10 | |
+| R8 | 10 kΩ 0805 1 % | Yageo **RC0805FR-0710KL** | 10 | ~0.03 at 10 | Remote photodiode load (Rev C). A first guess: you may re-stuff it after measuring, so 10 is handy |
 | R3 R4 | 100 kΩ 0805 1 % | Yageo **RC0805FR-07100KL** | 10 | 0.03 at 10 | |
 | J1 | JST PH 4-pin, vertical | JST **B4B-PH-K-S** | 3 | 0.18 | |
+| J4 | JST PH 2-pin, vertical | JST **B2B-PH-K-S** | 3 | ~0.15 | Remote photodiode (Rev C) |
 | J3 | Debug header STDC14, 2×7 1.27 mm SMD, keyed | Samtec **FTSH-107-01-L-DV-K** | 3 | 2.16 | Plugs straight into the V3MINIE's cable, see "The debug cable". Not the "-A" version (its alignment pins need holes) |
 
 **The encoder code**, decoded from the Bourns datasheet, `PEC09 - 2 2 20 F - S 0012`:
@@ -50,7 +52,8 @@ Two things from the same datasheet:
 | For | Part | Manufacturer part number | Qty | ~€/pc | Note |
 |---|---|---|---|---|---|
 | J1 cable | PH 4-pin housing | JST **PHR-4** | 4 | 0.09 | |
-| J1 cable | Pre-crimped leads, 300 mm, PH socket at both ends | JST **ASPHSPH24K305** | 8 | 0.44 | No crimping tool needed: push the leads into the housing until they click. Cut one in half for 2 bench leads with one free end |
+| J4 cable | PH 2-pin housing | JST **PHR-2** | 4 | ~0.07 | |
+| J1 + J4 cables | Pre-crimped leads, 300 mm, PH socket at both ends | JST **ASPHSPH24K305** | 10 | 0.44 | No crimping tool needed: push the leads into the housing until they click. Cut one in half for 2 bench leads with one free end |
 | Knob | Ø 11.4 mm (16 mm skirt), 6 mm D, push-on | CLIFF **CL170826BR** | 2 | 1.04 | "K87" type with a marker line |
 | ARM switch | Mini toggle, SPDT on-on, 5 A, solder lugs | E-Switch **100SP1T1B1M1QEH** | 1 | 2.70 | Panel mount in a **6.35 mm** hole (1/4-40 threaded bushing), in the LED+ wire. Solder the middle lug and one outer lug. Take **B1** in the code (threaded): B2/B4 are unthreaded and can't be held by a nut. Replaces the C&K 7101 (€10.83, same job, sturdier than needed) |
 | Flux | No-clean tack flux, **lead-free**, 5 cc syringe with tip | Chip Quik **SMD291NL** | 1 | ~11 | For the lead-free (pure Sn) solder: rated for the ~350 °C tip it needs. Not the plain SMD291 (tin-lead version). Price from the US site (~$12), check it on digikey.fr |
@@ -59,6 +62,15 @@ Two things from the same datasheet:
 **The leads are all black.** Before the first power-up, mark the GND lead (pin 1, the square
 pad on the board) and the +5V lead with a marker or tape. A swapped GND/5V on J1 is the most
 destructive mistake possible on this board.
+
+**The J4 cable (remote photodiode, ~50 cm).** JST's pre-crimped leads stop at 305 mm, so:
+cut one lead in half (two pigtails, each with a socket), push the sockets into a PHR-2, and
+splice them to a 50 cm **twisted pair** of hook-up wire (solder + heat-shrink). Solder the other
+end to the head's K and A pads, through the strain-relief holes. Mark the wire going to **pin 1
+= K**. Crimping your own contacts (JST SPH-002T-P0.5S) would need a crimp tool.
+
+**The sensor-head PCB** comes from the board house with the main board: its Gerbers are in
+`hardware/pd-head/output/`.
 
 ## The debug cable (decided 2026-10-14: B)
 
@@ -88,7 +100,7 @@ pins 13–14, and the CSV lists `FTSH-107-01-L-DV-K`.
    packaging is **Cut Tape (CT)**, not *Digi-Reel* (that adds a €5.50 reeling fee per line).
 3. The *Customer Reference* is printed on each bag, e.g. "R3 R4 100k 0805". Keep the bags
    closed until soldering: 0805 parts all look alike.
-4. **Total: about €50 without the probe, €72 with it** (excl. VAT), flux included. DigiKey ships free above a
+4. **Total: about €53 without the probe, €75 with it** (excl. VAT), flux and the Rev C parts included. DigiKey ships free above a
    threshold for France; check it at checkout. DigiKey normally ships to the EU duty-paid, so no
    customs bill on delivery; the checkout page says so.
 

@@ -11,7 +11,7 @@ Net naming rules (they drive the net classes in uv-bench.kicad_pro):
   GND, +3V3, +5V     -> power symbols; everything else is a net label
 """
 
-REV = "B"
+REV = "C"
 PAPER = "A4"
 
 FP_R = "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
@@ -51,7 +51,8 @@ sheet("UV bench", "uv-bench.kicad_sch",
       "20": "SCL", "1": "SDA",
       "11": "MODE_LED", "12": "BTN", "13": "ENC_A", "14": "ENC_B",
       "9": "UART_TX", "10": "UART_RX",               # PA2/PA3 = USART2, to the ST-LINK's virtual COM port
-      "2": NC, "3": NC, "16": NC, "17": NC},
+      "17": "ADC_EXT_PD",                            # PA12 = ADC1_IN12 (shares pin 17 with PA10): remote photodiode.
+      "2": NC, "3": NC, "16": NC},                   #   Not PA11 (pin 16): that pin is next to the PWM (pin 15)
      {"MPN": "ST STM32C031F6P6", "ref": "U2"}),
     C("100n", "+3V3", "GND", ref="C4"),           # decoupling, right at VDD
     C("100n", "NRST", "GND", ref="C5"),
@@ -80,6 +81,18 @@ sheet("UV bench", "uv-bench.kicad_sch",
     R("1k", "MODE_LED", "D2_A", ref="R5"),
     ("D", "Device:LED", "green", "LED_SMD:LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder",
      {"1": "GND", "2": "D2_A"}, {"ref": "D2"}),
+    # --- 8 remote photodiode (Rev C, optional): an SFH 2401 on a small head PCB at the end of a 50 cm
+    #     twisted pair, lying on the target under the same ZWB2 filter as the lamp. It is a current source
+    #     (~5.6 uA per mW/cm2 through the filter), so the load and the filter sit HERE, at the ADC:
+    #     cable pickup goes into a low impedance. R8 = 10 k reads ~0.5-50 mW/cm2 (swap it after measuring).
+    #     R6 limits the current if the cable shorts +3V3 to GND; R7 + C8 protect the ADC pin from ESD when
+    #     plugging. Unplugged, R8 pulls the input to 0 V: the firmware sees "no sensor".
+    ("J", "Connector_Generic:Conn_01x02", "remote PD (JST-PH)", "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+     {"1": "EXT_PD_K", "2": "EXT_PD"}, {"MPN": "JST B2B-PH-K-S", "ref": "J4"}),
+    R("1k", "EXT_PD_K", "+3V3", ref="R6"),        # photodiode bias, short-circuit limit
+    R("10k", "EXT_PD", "GND", ref="R8"),          # load: V = I_photo x 10 k
+    C("100n", "EXT_PD", "GND", ref="C8"),         # tau = 1 ms with R8; ESD charge sink at the connector
+    R("1k", "EXT_PD", "ADC_EXT_PD", ref="R7"),    # series resistor into the ADC pin
     # --- 6 debug port: ST's 14-pin STDC14, the connector of the STLINK-V3MINIE's cable (keyed: it can't go in
     #     the wrong way). Pins 3-12 are the ARM 10-pin layout; 13-14 add a UART, seen on the PC as a COM port
     #     through the probe's USB. Directions are the probe's: VCP_RX (13) receives what the MCU sends (TX).
