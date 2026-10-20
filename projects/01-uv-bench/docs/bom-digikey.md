@@ -22,7 +22,7 @@ One distributor for everything except the UV LED star, the aluminium plate and t
 | D2 | Green LED 0805 | Kingbright **APT2012SGC** | 5 | 0.18 | 2.2 V typ: with R5 = 1 k it runs at ~1 mA, plenty for an indicator |
 | SW1 | Encoder + push | Bourns **PEC09-2220F-S0012** | 2 | 3.69 | See below |
 | R1 | 3.9 Ω 1 W 2512 | Vishay **CRCW25123R90FKEG** | 3 | 0.30 | 1 %, 1 W, in stock. The Yageo in the parts list (RC2512FK-073R9L) was out of stock |
-| C1 C2 C3 C7 | 10 µF 0805 | Murata **GRM21BR61E106KA73L** | 10 | ~0.2 | **25 V** X5R: a higher rating loses less capacitance at 5 V (DC bias). Replaces the Samsung CL21A106KAYNNNE (only 2 left, 2026-10-14). Equivalents if this one runs out: TDK C2012X5R1E106K125AB, Taiyo Yuden TMK212BBJ106KG-T. Any 10 µF / 25 V / X5R or X7R / 0805 fits the footprint |
+| C1 C2 C3 C7 | 10 µF 0805 | Taiyo Yuden **TMK212BBJ106KG-T** (DigiKey 587-2985-1-ND) | 10 | ~0.16 | **25 V** X5R: a higher rating loses less capacitance at 5 V (DC bias). Third choice, after the Samsung CL21A106KAYNNNE (only 2 left, 2026-10-14) and the Murata GRM21BR61E106KA73L (unavailable, 2026-10-20). Other equivalent: TDK C2012X5R1E106K125AB (backordered, 16 weeks, as of 2026-10-20). Any 10 µF / 25 V / X5R or X7R / 0805 fits the footprint |
 | C4 C5 C6 C8 | 100 nF 0805 | Samsung **CL21B104KBCNNNC** | 10 | 0.09 | 50 V X7R, the standard decoupling cap |
 | R2 R5 R6 R7 | 1 kΩ 0805 1 % | Yageo **RC0805FR-071KL** | 10 | 0.03 at 10 | |
 | R8 | 10 kΩ 0805 1 % | Yageo **RC0805FR-0710KL** | 10 | ~0.03 at 10 | Remote photodiode load (Rev C). A first guess: you may re-stuff it after measuring, so 10 is handy |
@@ -54,7 +54,7 @@ Two things from the same datasheet:
 | J1 cable | PH 4-pin housing | JST **PHR-4** | 4 | 0.09 | |
 | J4 cable | PH 2-pin housing | JST **PHR-2** | 4 | ~0.07 | |
 | J1 + J4 cables | Pre-crimped leads, 300 mm, PH socket at both ends | JST **ASPHSPH24K305** | 10 | 0.44 | No crimping tool needed: push the leads into the housing until they click. Cut one in half for 2 bench leads with one free end |
-| Knob | Ø 11.4 mm (16 mm skirt), 6 mm D, push-on | CLIFF **CL170826BR** | 2 | 1.04 | "K87" type with a marker line |
+| Knob | Ø 11.4 mm (16 mm skirt), 6 mm D, push-on | CLIFF **CL170827BR** (DigiKey 4654-CL170827BR-ND) | 2 | ~1.04 | "K87" type, black with a blue cap and marker line. Same body and 6 mm D bore as the CL170826BR it replaces (2026-10-20): only the cap colour differs |
 | ARM switch | Mini toggle, SPDT on-on, 5 A, solder lugs | E-Switch **100SP1T1B1M1QEH** | 1 | 2.70 | Panel mount in a **6.35 mm** hole (1/4-40 threaded bushing), in the LED+ wire. Solder the middle lug and one outer lug. Take **B1** in the code (threaded): B2/B4 are unthreaded and can't be held by a nut. Replaces the C&K 7101 (€10.83, same job, sturdier than needed) |
 | Flux | No-clean tack flux, **lead-free**, 5 cc syringe with tip | Chip Quik **SMD291NL** | 1 | ~11 | For the lead-free (pure Sn) solder: rated for the ~350 °C tip it needs. Not the plain SMD291 (tin-lead version). Price from the US site (~$12), check it on digikey.fr |
 | Probe | ST-LINK V3MINIE | ST **STLINK-V3MINIE** | 1 | 22.40 | If not bought yet |

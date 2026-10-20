@@ -6,7 +6,7 @@ Quantity,Manufacturer,Manufacturer Part Number,Customer Reference
 5,Kingbright,APT2012SGC,D2 green LED 0805
 2,Bourns,PEC09-2220F-S0012,SW1 encoder + push
 3,Vishay Dale,CRCW25123R90FKEG,R1 3.9R 1W 2512
-10,Murata,GRM21BR61E106KA73L,C1 C2 C3 C7 10uF 25V X5R 0805
+10,Taiyo Yuden,TMK212BBJ106KG-T,C1 C2 C3 C7 10uF 25V X5R 0805
 10,Samsung,CL21B104KBCNNNC,C4 C5 C6 C8 100nF 50V X7R 0805
 10,Yageo,RC0805FR-071KL,R2 R5 R6 R7 1k 0805
 10,Yageo,RC0805FR-0710KL,R8 10k 0805 (remote PD load)
@@ -17,7 +17,7 @@ Quantity,Manufacturer,Manufacturer Part Number,Customer Reference
 4,JST,PHR-2,J4 cable housing
 10,JST,ASPHSPH24K305,J1 + J4 cable pre-crimped leads 12in
 3,Samtec,FTSH-107-01-L-DV-K,J3 STDC14 debug header 14-pin keyed
-2,CLIFF Electronic Components,CL170826BR,knob 6mm D shaft
+2,CLIFF Electronic Components,CL170827BR,knob 6mm D shaft black blue cap
 1,E-Switch,100SP1T1B1M1QEH,UV ARM toggle switch solder lug 6.35mm hole
 1,Chip Quik,SMD291NL,flux no-clean lead-free tack 5cc syringe
 1,STMicroelectronics,STLINK-V3MINIE,debug probe
