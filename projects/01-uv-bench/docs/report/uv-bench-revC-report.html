@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UV Bench Rev C</title>
+<style>
+  :root {
+    --ink: #1d2430; --muted: #5b6575; --line: #d6dbe3; --accent: #5a3fc0; --soft: #f3f1fb;
+  }
+  @page { size: A4; margin: 11mm 13mm 10mm 13mm; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; max-width: 182mm; padding: 16px;
+    font: 9.2pt/1.36 "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink); background: #fff;
+  }
+  @media print { body { padding: 0; max-width: none; } }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 6px; margin-bottom: 10px; }
+  h1 { font-size: 19pt; margin: 0; letter-spacing: .2px; }
+  .sub { color: var(--muted); margin-top: 2px; }
+  h2 { font-size: 11.2pt; color: var(--accent); margin: 9px 0 3px; }
+  p { margin: 0 0 6px; }
+  ul { margin: 0 0 6px; padding-left: 17px; }
+  li { margin-bottom: 1.5px; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; font-size: 8.8pt; }
+  th, td { text-align: left; vertical-align: top; padding: 3px 5px; border-bottom: 1px solid var(--line); }
+  th { background: var(--soft); font-weight: 600; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 8px; }
+  .fact { background: var(--soft); border-radius: 6px; padding: 5px 7px; }
+  .fact b { display: block; font-size: 11.5pt; }
+  .fact span { color: var(--muted); font-size: 8.2pt; }
+  figure { margin: 6px 0 8px; break-inside: avoid; }
+  figure img { width: 100%; display: block; border: 1px solid var(--line); border-radius: 4px; }
+  figcaption { color: var(--muted); font-size: 8.3pt; margin-top: 3px; }
+  .split { display: grid; grid-template-columns: 1.55fr 1fr; gap: 10px; align-items: start; }
+  .side figure { margin-top: 4px; }
+  .side .head img { width: 62%; margin: 0 auto; }
+  .duo { display: grid; grid-template-columns: 2.2fr 1fr; gap: 8px; align-items: end; }
+  .page2 { break-before: page; }
+  pre { font: 8.2pt/1.3 "DejaVu Sans Mono", Consolas, monospace; background: var(--soft);
+        border-radius: 6px; padding: 6px 8px; margin: 4px 0 8px; overflow-x: auto; }
+  footer { color: var(--muted); font-size: 8pt; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 4px; }
+  @media (max-width: 600px) { .facts { grid-template-columns: repeat(2, 1fr); } .split, .duo { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>UV Bench, Rev C: design report</h1>
+  <div class="sub">A 365 nm LED held at constant optical power by a photodiode and a microcontroller ·
+    project 01 of the electronics workspace · October 2026 · status: boards and parts ordered</div>
+</header>
+
+<h2>1. Goal</h2>
+<p>A small bench light source for UV-fluorescence experiments. A ~1 W, 365 nm LED must deliver a
+<b>stable, settable light power</b>, not just a stable current: LED output drifts with temperature and
+age. A photodiode watches the LED and the microcontroller adjusts the drive until the reading
+matches the setpoint. An external board sets the power over I2C; a knob allows manual use. The
+board must be cheap, small and <b>solderable by hand</b>.</p>
+
+<div class="facts">
+  <div class="fact"><b>58 × 32 mm</b><span>2 layers, Ø 22 mm cut-out for the LED</span></div>
+  <div class="fact"><b>26 parts</b><span>16 types, 4 resistor values, 2 capacitor values</span></div>
+  <div class="fact"><b>≤ 0.33 A</b><span>LED current, limited in hardware</span></div>
+  <div class="fact"><b>5 V, I2C</b><span>one JST-PH cable to the host board</span></div>
+</div>
+
+<h2>2. How it works</h2>
+<pre>5 V ──► LED+ ──[ARM switch]──► UV LED ──► Q1 (MOSFET) ──► R1 3.9 Ω ──► GND
+                                              ▲ gate              └──► I_MON (current, monitoring)
+MCU PWM 20 kHz ──► RC filter (1 kΩ / 10 µF) ──┘
+MCU ADC ◄── photodiode D1 + 100 kΩ load ◄~~~ a fraction of the LED light   (the feedback loop)</pre>
+<ul>
+  <li>The MCU outputs PWM; an RC filter smooths it into a DC gate voltage (0–3.3 V, 4 mV ripple).</li>
+  <li>Q1 with R1 forms a <b>voltage-controlled current sink</b>: I ≈ (V<sub>gate</sub> − V<sub>GS</sub>) / R1. The LED current is DC, so the light has no flicker.</li>
+  <li>The photodiode current (≈ 0.1 A/W at 365 nm) becomes a voltage on a resistor; the MCU compares it with the setpoint and corrects the PWM, in firmware.</li>
+</ul>
+
+<h2>3. Main design choices</h2>
+<ul>
+  <li><b>One light loop, no current loop.</b> Rev A had an op-amp holding the current exactly <i>and</i>
+    the MCU holding the light: two loops in cascade, 71 parts, 9 ICs. The MOSFET's current is imprecise and
+    drifts, but the photodiode loop corrects any drift whatever its cause (MOSFET, LED ageing, LED
+    temperature). So the op-amps, switch, AND gate and compensation network all went: <b>71 → 21 parts</b> (Rev B).</li>
+  <li><b>A hardware current limit for free.</b> At full drive Q1 is fully on and only R1 and the LED limit the
+    current: I<sub>max</sub> = (5 V − V<sub>f</sub>) / 3.9 Ω ≈ 0.33 A. A firmware bug can turn the LED fully on, never overdrive it.</li>
+  <li><b>A resistor instead of a transimpedance amplifier.</b> The light is DC, so a plain 100 kΩ load is
+    enough. The reverse bias keeps the photodiode linear. The firmware subtracts a dark reading taken at each switch-on.</li>
+  <li><b>Local regulation.</b> The loop runs on the board: the host only says "hold this power". If the I2C
+    cable or the host hangs, the bench keeps regulating and can switch itself off.</li>
+  <li><b>Safety independent of the MCU.</b> A latching <b>UV ARM toggle switch</b> in the LED+ wire disconnects
+    the LED physically, even if Q1 fails short. The firmware sees I<sub>MON</sub> ≈ 0 and reports ARM_OFF.</li>
+  <li><b>Optics from a torch.</b> The LED star (20 mm), reflector and ZWB2 filter come from a Convoy S2 365 nm
+    flashlight. The star sits in the board's Ø 22 mm cut-out, screwed to an aluminium plate that serves as heatsink.</li>
+  <li><b>Rev C: a remote sensor on the target.</b> A second photodiode on a 12 × 21 mm head, under the same ZWB2
+    filter, on a 50 cm cable. It measures what the sample actually receives (≈ 5.6 µA per mW/cm²; 5–300 µA
+    expected), so no amplifier is needed: a 10 kΩ load gives 0.06–2.8 V. The firmware can regulate on it or just report it.</li>
+  <li><b>Designed for hand soldering and learning.</b> 0805 passives, SOT-23 and TSSOP-20 packages, few distinct
+    values, values printed on the assembly drawing. The schematic and board are generated by Python scripts; the
+    routing is done with Freerouting, then checked by KiCad's ERC and DRC (0 errors).</li>
+</ul>
+
+<h2>4. Status and next steps</h2>
+<ul>
+  <li><b>Done:</b> ERC 0 / DRC 0 on both boards; Gerbers ordered at JLCPCB (5 + 5, lead-free HASL, tag
+    <code>uv-bench-revC-ordered</code>); parts ordered at DigiKey (~€53); Convoy S2 ordered; I2C interface spec v2.3.</li>
+  <li><b>Next:</b> check the star fits the cut-out and the MCP1702 pinout on arrival; firmware (CubeMX setup, the
+    loop, I2C registers); a simulation of the LED driver; assembly and first power-up, starting current-limited.</li>
+</ul>
+
+<h2 class="page2">5. The circuit</h2>
+<figure>
+  <img src="img/revc-schematic.svg" alt="Rev C schematic: 8 numbered blocks">
+  <figcaption><b>Figure 1.</b> Rev C schematic, one sheet in 8 blocks: 1 power input, 2 3.3 V regulator, 3 MCU,
+    4 LED driver, 5 photodiode, 6 debug port, 7 knob and mode LED, 8 remote photodiode. The symbol reads MCP1700;
+    the fitted part is the pin-compatible MCP1702 (stock).</figcaption>
+</figure>
+
+<div class="split"><div><h2 style="margin-top:2px">6. Main components</h2>
+<table>
+  <tr><th>Ref</th><th>Part</th><th>Role, and why this one</th></tr>
+  <tr><td>U2</td><td>STM32C031F6P6 (TSSOP-20)</td><td>Runs the loop: PWM (TIM1), 3 ADC inputs (PD, I_MON, remote PD), I2C target, encoder timer, UART. Cheap Cortex-M0+, all functions on default pins</td></tr>
+  <tr><td>Q1, R1</td><td>AO3400A + 3.9 Ω 1 W (2512)</td><td>Current sink. Logic-level MOSFET, fully on at 2.5 V gate; R1 sets the limit and gives a free current measurement</td></tr>
+  <tr><td>R2, C7, R3</td><td>1 kΩ, 10 µF, 100 kΩ</td><td>PWM → DC filter (τ = 10 ms); R3 pulls the gate low during reset, so the LED stays off</td></tr>
+  <tr><td>D1, R4, C6</td><td>SFH 2401, 100 kΩ, 100 nF</td><td>On-board photodiode watching the LED; V = I<sub>pd</sub> × 100 kΩ, filtered at 10 ms</td></tr>
+  <tr><td>U1</td><td>MCP1702 3.3 V LDO (SOT-23)</td><td>3.3 V for the MCU, also the ADC reference. ~5 mA load, so a linear regulator wastes only ~9 mW</td></tr>
+  <tr><td>SW1, D2</td><td>Bourns PEC09 encoder + push, green LED</td><td>Manual mode. An encoder, not a potentiometer, so switching mode never makes the power jump</td></tr>
+  <tr><td>J1 / J4</td><td>JST-PH 4-pin / 2-pin</td><td>Host cable (GND, 5 V, SDA, SCL), keyed / remote photodiode, protected by R6, R7, C8</td></tr>
+  <tr><td>J3</td><td>STDC14 (Samtec FTSH-107, keyed)</td><td>Plugs straight into the ST-LINK V3MINIE: SWD programming plus a UART console over the same USB cable</td></tr>
+  <tr><td>J2</td><td>2 solder pads</td><td>Wires to the LED star, through the ARM switch</td></tr>
+</table></div>
+<div class="side">
+  <figure>
+    <img src="img/revc-3d.png" alt="3D view of the Rev C main board">
+    <figcaption><b>Figure 2.</b> Main board, KiCad 3D view. The LED star sits in the round cut-out; D1 watches it from the
+      cut-out's edge. D1 and SW1 (right) have no 3D model in KiCad's library, so only their pads show.</figcaption>
+  </figure>
+  <figure class="head">
+    <img src="img/head-3d.png" alt="3D view of the sensor head">
+    <figcaption><b>Figure 3.</b> Sensor head, 12 × 21 mm: SFH 2401 pads, cable pads K and A with strain-relief holes.</figcaption>
+  </figure>
+</div></div>
+
+
+
+<footer>Sources in the repository: docs/rev-b-simple.md (design notes), docs/interface-spec.md (v2.3),
+docs/bom-digikey.md, hardware/uv-bench and hardware/pd-head (KiCad 10). github.com/L-A-7/Electronic-design</footer>
+</body>
+</html>

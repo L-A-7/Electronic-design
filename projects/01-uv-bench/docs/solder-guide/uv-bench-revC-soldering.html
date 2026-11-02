@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UV Bench Soldering Guide</title>
+<style>
+  :root {
+    --ink: #1d2430; --muted: #5b6575; --line: #d6dbe3; --bg: #ffffff; --card: #f5f6f9;
+    --accent: #5a3fc0; --hi: #ff3d7f; --ok: #1f8a4c; --warn: #b5531a; --warnbg: #fff4ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e6e9ef; --muted: #a2abba; --line: #364052; --bg: #151a22; --card: #1e2530;
+      --accent: #a991ff; --hi: #ff5c93; --ok: #4cc983; --warn: #f0a070; --warnbg: #2c2219;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 1060px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 27px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 34px 0 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 18px 0 6px; }
+  p { margin: 0 0 10px; }
+  ul, ol { margin: 0 0 10px; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  .sub { color: var(--muted); }
+  img { max-width: 100%; display: block; }
+  .hero { border-radius: 10px; margin: 14px 0 6px; background: #cfd3e6; }
+  .cap { color: var(--muted); font-size: 13px; margin: 4px 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 6px 0 12px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { background: var(--card); }
+  .tablewrap { overflow-x: auto; }
+  .tip { background: var(--card); border-left: 4px solid var(--accent); padding: 8px 12px; border-radius: 6px; margin: 10px 0; }
+  code { background: var(--card); padding: 1px 4px; border-radius: 4px; font-size: 13px; }
+
+  .mapwrap { display: grid; grid-template-columns: 1fr 250px; gap: 14px; align-items: start; }
+  .map { position: relative; background: var(--card); border-radius: 10px; padding: 6px; }
+  .map svg { width: 100%; height: auto; display: block; }
+  .part { fill: transparent; stroke: transparent; stroke-width: 0.25; cursor: pointer; }
+  .part:hover { stroke: var(--accent); }
+  .part.on { stroke: var(--hi); stroke-width: 0.45; fill: rgba(255, 61, 127, 0.18); }
+  .lbl { font: 700 1.5px sans-serif; fill: #fff; paint-order: stroke; stroke: var(--hi); stroke-width: 0.5px;
+         pointer-events: none; display: none; }
+  .lbl.on { display: block; }
+  .groups { display: flex; flex-direction: column; gap: 5px; }
+  .groups button { text-align: left; font: inherit; font-size: 14px; color: var(--ink); background: var(--card);
+                   border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+  .groups button b { display: inline-block; min-width: 70px; }
+  .groups button span { color: var(--muted); font-size: 12.5px; }
+  .groups button.on { border-color: var(--hi); box-shadow: inset 4px 0 0 var(--hi); }
+  #tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 13px;
+         padding: 3px 7px; border-radius: 5px; display: none; white-space: nowrap; }
+
+  .steps { list-style: none; padding: 0; counter-reset: s; }
+  .steps li { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 9px 10px;
+              border: 1px solid var(--line); border-radius: 9px; margin-bottom: 7px; background: var(--bg); }
+  .steps li.done { opacity: .55; }
+  .steps li.cur { border-color: var(--hi); }
+  .steps input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--ok); }
+  .steps .t { font-weight: 650; cursor: pointer; }
+  .steps .t::before { content: counter(s) ". "; color: var(--muted); }
+  .steps .d { color: var(--muted); font-size: 14px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .headmap { max-width: 230px; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 8px; }
+  @media (max-width: 760px) { .mapwrap, .two { grid-template-columns: 1fr; } .groups { flex-direction: row; flex-wrap: wrap; } }
+  @media print { .groups, #tip { display: none; } .mapwrap { grid-template-columns: 1fr; } h2 { break-after: avoid; } }
+</style>
+</head>
+<body>
+<main>
+<h1>UV Bench Rev C: soldering guide</h1>
+<p class="sub">Main board (26 parts) and the remote sensor head · hand soldering · values, positions, order, and the MCU.</p>
+
+<img class="hero" src="img/iso.png" alt="3D view of the assembled Rev C main board">
+<p class="cap">The finished main board (KiCad 3D view). D1, the photodiode next to the round cut-out, and SW1, the encoder on the right, have no 3D model in KiCad's library, so only their pads show. Every part sits on the top side. The through-hole parts (J1, J4, SW1, and the J2 wires) are soldered from underneath.</p>
+
+<h2>1. Before you start</h2>
+<h3>Which solder</h3>
+<div class="tablewrap"><table>
+  <tr><th></th><th>Lead-free, e.g. Sn99.3Cu0.7 or SAC305 (your preference)</th><th>Tin-lead, Sn63Pb37 or Sn60Pb40</th></tr>
+  <tr><td>Melts at</td><td>217–227 °C</td><td>183 °C</td></tr>
+  <tr><td>Iron setting</td><td><b>340–360 °C</b> for SMD, ~370 °C for R1 and the ground pads</td><td><b>300–320 °C</b></td></tr>
+  <tr><td>Wetting</td><td>Slower; it needs fresh flux on every joint</td><td>Flows easily, forgiving</td></tr>
+  <tr><td>A good joint looks</td><td>Satin or slightly grainy: that's normal</td><td>Shiny and smooth</td></tr>
+  <tr><td>Health</td><td colspan="2">Flux fumes come with both: use a fan or an extractor. With lead, wash your hands afterwards and don't eat at the bench</td></tr>
+</table></div>
+<p><b>Both work on this board.</b> Its finish is lead-free HASL, which wets well with either. Lead-free with
+your SMD291NL flux is fine: the flux is what makes the difference. <b>Pick one alloy and stay with it for the
+whole board.</b> Mixing them in a joint makes an alloy whose melting point is spread out, which can give cracked,
+grainy joints. Wire diameter: <b>0.5 mm</b> for the SMD parts, 0.8 mm or more for the encoder and the wires.</p>
+
+<h3>Tools on the bench</h3>
+<ul>
+  <li><b>Iron tip:</b> a 1.5–2 mm chisel, or a "hoof" (bevel) tip. A fine conical tip holds too little heat, even for the MCU.</li>
+  <li>Fine, pointed <b>tweezers</b>; a <b>×10 loupe</b>, or your phone's camera at full zoom; a bright lamp.</li>
+  <li><b>Solder wick</b> 1.5–2 mm, <b>isopropyl alcohol</b> (IPA) and an old toothbrush; Kapton tape.</li>
+  <li>A <b>multimeter</b> with continuity beep and diode mode.</li>
+  <li>Your third hand, or tape, to hold the board flat.</li>
+</ul>
+
+<h3>Bag discipline</h3>
+<p>Ceramic capacitors carry <b>no marking</b>: a 10 µF and a 100 nF look identical. Keep each DigiKey bag closed
+until its step, solder <b>every part from one bag</b>, then close it before opening the next. If a part escapes,
+don't guess: throw it away (you have spares).</p>
+
+<h2>2. Where each part goes</h2>
+<p>Click a value to see where its parts go. Hover over a part for its reference and value.</p>
+<div class="mapwrap">
+  <div class="map" id="map">
+    <svg id="svg" viewBox="98.795 98.794 60.367 34.368" aria-label="Top view of the board">
+      <image href="img/top.png" x="98.795" y="98.794" width="60.367" height="34.368"></image>
+      <g id="parts"></g><g id="labels"></g>
+    </svg>
+    <div id="tip"></div>
+  </div>
+  <div class="groups" id="groups"></div>
+</div>
+<p class="cap">Top view (KiCad 3D render). The reference names are printed on the board's silkscreen; the values aren't, which is why the bags matter.</p>
+
+<h3>Values and references</h3>
+<p><b>A correction to your example:</b> C5 is <b>100 nF</b>, not 10 µF. The 10 µF ones are C1, C2, C3 and C7.</p>
+<div class="tablewrap"><table id="valtable">
+  <tr><th>Value</th><th>References</th><th>Qty</th><th>Package</th><th>Orientation</th></tr>
+</table></div>
+
+<h2>3. Soldering order</h2>
+<p><b>The rule:</b> lowest and hardest parts first. The MCU goes first, while the board is flat and empty and
+you're fresh. The tall connectors go last, because they get in the way of the iron. Tick each step as you go;
+your ticks stay in this browser. Click a step's title to highlight its parts on the map.</p>
+<ol class="steps" id="steps"></ol>
+
+<h2>4. The MCU (U2, TSSOP-20, 0.65 mm pitch)</h2>
+<p>The only fine-pitch part. Its legs are 0.65 mm apart, with 0.3 mm gaps. That sounds small, but with flux
+it is very doable: <b>surface tension does most of the work</b>. Molten solder prefers to sit on the copper
+pad and the leg, not in the gap between them, as long as there's flux and not too much solder.</p>
+
+<div class="two">
+<div>
+<h3>Placing it</h3>
+<ol>
+  <li><b>Find pin 1.</b> On the chip: a small dot or dimple in one corner, and/or a bevelled long edge. On the
+    board: the small triangle at the <b>top-left</b> of U2, next to C5. Pin 1 goes there. Pins 1–10 run down the
+    left side, 11–20 up the right side.</li>
+  <li>Clean the pads with IPA. Put <b>one tiny drop of solder on one corner pad only</b>: pin 20, top right.</li>
+  <li>Brush a thin film of flux over all 20 pads.</li>
+  <li>Place the chip with tweezers. Reheat the tinned pad and slide the chip until <b>every leg sits centred on
+    its pad, on both sides</b>. Look with the loupe from several angles. Take your time: this is the only step
+    that is hard to undo.</li>
+  <li>Solder the <b>opposite corner</b>: pin 10, bottom left. The chip is now fixed. Check the alignment once more.</li>
+</ol>
+</div>
+<div>
+<h3>Soldering the legs</h3>
+<p><b>Pin by pin</b> (recommended for a first time): fresh flux, then touch the tip where the leg meets the pad,
+and feed a <i>very</i> small amount of solder, ~1 s per leg. Work along one side, then the other.</p>
+<p><b>Drag soldering</b> (faster, once you're comfortable): plenty of flux on one row; load a small bead of solder
+on the tip; drag it slowly along the <i>ends</i> of the legs, ~1 s per leg. Each leg takes what it needs.</p>
+<p><b>Lead-free:</b> 340–360 °C. Flux burns off faster at these temperatures, so re-apply it whenever the solder
+stops flowing nicely. Don't dwell more than ~3 s on one area; let it cool between rows.</p>
+</div>
+</div>
+
+<h3>Bridges, and checking</h3>
+<ul>
+  <li><b>A bridge</b> (solder joining two legs) is normal and easy to fix. Add flux, then drag a <i>clean</i> tip
+    away from the chip along the bridge: the extra solder follows the tip. If it stays, lay the wick on it with
+    flux, press the iron on the wick for 2 s, and lift both together.</li>
+  <li><b>Inspect</b> every leg with the loupe and light at a low angle. Each leg should show a small concave fillet onto
+    the pad. Run a needle gently along the legs: a leg that moves isn't soldered.</li>
+  <li><b>Measure:</b> pin 4 (VDD) to pin 5 (VSS) must <b>not</b> beep. Pin 5 to the ground pour: beep. Neighbouring legs
+    shouldn't beep, except where the circuit joins them.</li>
+  <li><b>Pins 2, 3 and 16 are unused</b>: solder them anyway, for strength.</li>
+  <li>Clean the flux with IPA and the toothbrush before soldering U2's neighbours: you'll see the joints better.</li>
+</ul>
+<div class="tip"><b>J3, the debug header,</b> is also SMD, at 1.27 mm: twice the MCU's pitch. Use the same method:
+one corner pad tinned, place and align, tack the opposite corner, then the rest.</div>
+
+<h2>5. Small parts: the two-pad method</h2>
+<ol>
+  <li>Tin <b>one</b> pad with a small drop.</li>
+  <li>Hold the part with tweezers, reheat that drop, and slide the part in flat against the board. Remove the iron, then let go.</li>
+  <li>Solder the second pad (flux, tip, a little solder).</li>
+  <li>Retouch the first pad with a touch of flux, so it reflows properly.</li>
+</ol>
+<p><b>Pads on the ground pour</b> (the GND end of C1–C8, R3, R4 and R8) take longer to heat, because the copper plane
+draws heat away. Hold the tip a little longer, or go 20 °C higher. <b>R1</b> (2512, 1 W) has big pads: use the
+largest tip you have.</p>
+
+<h2>6. Before the first power-up</h2>
+<ol>
+  <li><b>Look</b> at every joint with the loupe. Check the orientation of U2, D1 and D2 against the table above.</li>
+  <li><b>Resistance between +5 V and GND</b> (J1 pin 2 to pin 1): it must <b>not</b> be a short. The reading climbs as C1/C2 charge: that's normal.</li>
+  <li><b>+3V3 to GND</b> (across C3): not a short either.</li>
+  <li><b>First power</b> from a bench supply: 5 V with a <b>50 mA current limit</b>, LED star not connected (or ARM switch off).
+    Expect a few mA. Measure <b>3.3 V</b> across C3. Then plug in the ST-LINK and program it.</li>
+</ol>
+
+<h2>7. The sensor head</h2>
+<div class="two">
+<div>
+<img class="headmap" src="img/head-top.png" alt="Top view of the sensor head">
+<p class="cap">Sensor head, 12 × 21 mm (top view). D1's pads at the top; wire pads K and A, with their strain-relief holes, below.</p>
+</div>
+<div>
+<ol>
+  <li><b>D1 (SFH 2401)</b> first: its <b>large pad is the cathode</b>, on the <b>K</b> side (left).
+    Clear window up. Same two-pad method as on the main board.</li>
+  <li><b>Clean the flux off the window</b> with IPA, and don't touch it. Residue on the window absorbs UV and shifts the calibration.</li>
+  <li><b>The wires:</b> thread each through the big hole first, then solder it in the small pad next to it.
+    The big hole takes the pulling, the joint doesn't. <b>K → J4 pin 1</b>, <b>A → J4 pin 2</b>; the back of the board says so too.</li>
+  <li>The ZWB2 filter goes over D1 only after the board is clean and tested.</li>
+</ol>
+</div>
+</div>
+
+<footer>Generated from the Rev C board files (<code>hardware/uv-bench</code>, <code>hardware/pd-head</code>, KiCad 10) · positions read from the PCB · see also <code>docs/rev-b-simple.md</code> and <code>docs/bom-digikey.md</code>.</footer>
+</main>
+
+<script>
+const PARTS = [{"ref": "R3", "pb": [125.3, 126.9, 1.4, 3.2]}, {"ref": "C8", "pb": [114.125, 101.775, 3.25, 1.45]}, {"ref": "J2", "pb": [115.45, 129.075, 6.05, 1.85]}, {"ref": "R7", "pb": [143.8, 122.15, 1.4, 3.2]}, {"ref": "D2", "pb": [151.9, 122.6, 3.2, 1.4]}, {"ref": "J1", "pb": [141.0, 101.875, 7.2, 1.75]}, {"ref": "U2", "pb": [133.9, 112.375, 7.2, 6.25]}, {"ref": "J4", "pb": [120.6, 101.675, 3.2, 1.75]}, {"ref": "R6", "pb": [122.9, 124.05, 3.2, 1.4]}, {"ref": "R5", "pb": [148.55, 122.9, 1.4, 3.2]}, {"ref": "D1", "pb": [126.35, 112.2, 2.1, 7.6]}, {"ref": "R2", "pb": [138.9, 123.55, 3.2, 1.4]}, {"ref": "C5", "pb": [131.025, 114.375, 1.45, 3.25]}, {"ref": "C4", "pb": [133.125, 120.275, 3.25, 1.45]}, {"ref": "C3", "pb": [139.125, 120.275, 3.25, 1.45]}, {"ref": "C7", "pb": [133.375, 124.525, 3.25, 1.45]}, {"ref": "R4", "pb": [125.4, 121.3, 3.2, 1.4]}, {"ref": "R1", "pb": [135.75, 127.625, 7.5, 3.35]}, {"ref": "Q1", "pb": [128.05, 128.25, 4.9, 2.7]}, {"ref": "R8", "pb": [109.15, 102.05, 3.2, 1.4]}, {"ref": "SW1", "pb": [145.45, 112.6, 8.05, 6.8]}, {"ref": "U1", "pb": [136.95, 107.05, 4.9, 2.7]}, {"ref": "C6", "pb": [130.275, 121.375, 1.45, 3.25]}, {"ref": "C2", "pb": [136.275, 102.125, 1.45, 3.25]}, {"ref": "C1", "pb": [143.625, 107.275, 3.25, 1.45]}, {"ref": "J3", "pb": [127.35, 101.39, 6.3, 8.36]}];
+const GROUPS = [
+  { id: "U2",   name: "U2",     desc: "STM32C031F6P6 MCU",       refs: ["U2"],  pkg: "TSSOP-20", orient: "<b>Pin 1 dot to the top-left triangle</b>, next to C5" },
+  { id: "U1",   name: "U1",     desc: "MCP1702 3.3 V regulator", refs: ["U1"],  pkg: "SOT-23", orient: "Fits one way (2 pads + 1). <b>Looks identical to Q1</b>: one bag at a time" },
+  { id: "Q1",   name: "Q1",     desc: "AO3400A MOSFET",          refs: ["Q1"],  pkg: "SOT-23", orient: "Fits one way. Not to be swapped with U1" },
+  { id: "c100n",name: "100 nF", desc: "capacitors",              refs: ["C4","C5","C6","C8"], pkg: "0805", orient: "None" },
+  { id: "c10u", name: "10 µF",  desc: "capacitors",              refs: ["C1","C2","C3","C7"], pkg: "0805", orient: "None" },
+  { id: "r1k",  name: "1 kΩ",   desc: "resistors, marked 102 or 1001", refs: ["R2","R5","R6","R7"], pkg: "0805", orient: "None" },
+  { id: "r10k", name: "10 kΩ",  desc: "resistor, marked 103 or 1002",  refs: ["R8"], pkg: "0805", orient: "None" },
+  { id: "r100k",name: "100 kΩ", desc: "resistors, marked 104 or 1003", refs: ["R3","R4"], pkg: "0805", orient: "None" },
+  { id: "R1",   name: "3.9 Ω",  desc: "1 W power resistor, marked 3R9", refs: ["R1"], pkg: "2512", orient: "None; big pads, more heat" },
+  { id: "D1",   name: "D1",     desc: "SFH 2401 photodiode",     refs: ["D1"],  pkg: "SMD", orient: "<b>Large pad = cathode = the lower pad</b> (towards R4). Window up, keep it clean" },
+  { id: "D2",   name: "D2",     desc: "green LED",               refs: ["D2"],  pkg: "0805", orient: "<b>Cathode on the left pad</b> (towards R5). Check with the meter's diode mode: it glows faintly with the red probe on the anode" },
+  { id: "J3",   name: "J3",     desc: "STDC14 debug header",     refs: ["J3"],  pkg: "SMD 2×7, 1.27 mm", orient: "<b>Pin 1</b> (a triangle or chamfer on the header body) <b>to the top-left pad</b>, the one nearest J4" },
+  { id: "J1J4", name: "J1, J4", desc: "JST-PH 4-pin and 2-pin",  refs: ["J1","J4"], pkg: "through-hole", orient: "Body on the top face, <b>solder underneath</b>. Square pad = pin 1. The body is asymmetric: match the silkscreen outline and the 3D view before soldering" },
+  { id: "SW1",  name: "SW1",    desc: "PEC09 encoder + push",    refs: ["SW1"], pkg: "through-hole", orient: "<b>Body on the top face</b>, shaft out over the right edge, body flat on the board. <b>Solder the 5 legs on the bottom face</b>" },
+  { id: "J2",   name: "J2",     desc: "LED wires (to the star, via the ARM switch)", refs: ["J2"], pkg: "wire pads", orient: "<b>+ = square pad</b>. Last: at final assembly" },
+];
+const STEPS = [
+  { g: ["U2"],  t: "U2, the MCU", d: "Pin 1 top-left. See §4. Then clean the flux and check for bridges." },
+  { g: ["U1"],  t: "U1, the 3.3 V regulator", d: "Open the MCP1702 bag only. Check its datasheet pinout first: 1 GND, 2 V_OUT, 3 V_IN." },
+  { g: ["Q1"],  t: "Q1, the MOSFET", d: "Now the AO3400A bag." },
+  { g: ["c100n"], t: "100 nF bag: C4, C5, C6, C8", d: "C4 and C5 sit right by the MCU." },
+  { g: ["c10u"],  t: "10 µF bag: C1, C2, C3, C7", d: "Ground-pour pads: a little more heat." },
+  { g: ["r1k"],   t: "1 kΩ bag: R2, R5, R6, R7", d: "Marked 102 or 1001. Resistors can go either way round." },
+  { g: ["r10k"],  t: "10 kΩ bag: R8", d: "Marked 103 or 1002." },
+  { g: ["r100k"], t: "100 kΩ bag: R3, R4", d: "Marked 104 or 1003." },
+  { g: ["R1"],    t: "R1, 3.9 Ω 1 W", d: "Biggest pads: big tip, more heat." },
+  { g: ["D1","D2"], t: "D1 photodiode and D2 green LED", d: "Both polarised: see the table. Keep D1's window clean." },
+  { g: ["J3"],    t: "J3, debug header", d: "Same method as the MCU, at twice the pitch. Pin 1 to the top-left pad." },
+  { g: ["J1J4"],  t: "J1 and J4, JST-PH connectors", d: "Through-hole: body on top, solder from underneath. Solder one pin, check they sit flat and square, then the others." },
+  { g: ["SW1"],   t: "SW1, the encoder", d: "Body on top, legs through, solder on the bottom face. Each leg in 2–3 s, then let it cool: Bourns warns that the plastic body can soften." },
+  { g: [],        t: "Checks before power", d: "§6: look, measure +5 V/GND and +3V3/GND, first power current-limited." },
+  { g: ["J2"],    t: "J2, LED wires", d: "At final assembly, through the ARM switch to the star." },
+];
+
+const svgNS = "http://www.w3.org/2000/svg";
+const partsG = document.getElementById("parts"), labelsG = document.getElementById("labels");
+const tip = document.getElementById("tip"), map = document.getElementById("map");
+const groupOf = {};
+GROUPS.forEach(g => g.refs.forEach(r => groupOf[r] = g));
+const describe = (ref) => { const g = groupOf[ref]; if (!g) return ref; return ref + " · " + (g.name.includes(ref) ? g.desc : g.name + " " + g.desc); };
+
+PARTS.forEach(p => {
+  const [x, y, w, h] = p.pb, m = 0.35;
+  const r = document.createElementNS(svgNS, "rect");
+  Object.entries({ x: x - m, y: y - m, width: w + 2 * m, height: h + 2 * m, rx: 0.5 }).forEach(([k, v]) => r.setAttribute(k, v));
+  r.setAttribute("class", "part"); r.dataset.ref = p.ref;
+  r.addEventListener("mousemove", e => {
+    const b = map.getBoundingClientRect();
+    tip.textContent = describe(p.ref);
+    tip.style.display = "block"; tip.style.left = (e.clientX - b.left + 12) + "px"; tip.style.top = (e.clientY - b.top + 12) + "px";
+  });
+  r.addEventListener("mouseleave", () => tip.style.display = "none");
+  r.addEventListener("click", () => { const g = groupOf[p.ref]; if (g) select([g.id]); });
+  partsG.appendChild(r);
+  const t = document.createElementNS(svgNS, "text");
+  t.setAttribute("x", x + w / 2); t.setAttribute("y", y - 0.7); t.setAttribute("text-anchor", "middle");
+  t.setAttribute("class", "lbl"); t.dataset.ref = p.ref; t.textContent = p.ref;
+  labelsG.appendChild(t);
+});
+
+const groupsDiv = document.getElementById("groups");
+GROUPS.forEach(g => {
+  const b = document.createElement("button");
+  b.dataset.id = g.id;
+  b.innerHTML = "<b>" + g.name + "</b> <span>" + (g.name.includes(g.refs[0]) ? g.desc : g.refs.join(" ")) + "</span>";
+  b.addEventListener("click", () => select(b.classList.contains("on") ? [] : [g.id]));
+  groupsDiv.appendChild(b);
+});
+
+function select(ids) {
+  const refs = new Set(GROUPS.filter(g => ids.includes(g.id)).flatMap(g => g.refs));
+  document.querySelectorAll(".part, .lbl").forEach(el => el.classList.toggle("on", refs.has(el.dataset.ref)));
+  document.querySelectorAll("#groups button").forEach(b => b.classList.toggle("on", ids.includes(b.dataset.id)));
+}
+
+const vt = document.getElementById("valtable");
+GROUPS.forEach(g => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = "<td><b>" + g.name + "</b><br><span class='sub'>" + g.desc + "</span></td><td>" + g.refs.join(", ") +
+    "</td><td>" + g.refs.length + "</td><td>" + g.pkg + "</td><td>" + g.orient + "</td>";
+  vt.appendChild(tr);
+});
+
+let done = {};
+try { done = JSON.parse(localStorage.getItem("uvb-solder-steps") || "{}"); } catch (e) { done = {}; }
+const stepsOl = document.getElementById("steps");
+function refreshSteps() {
+  let first = true;
+  [...stepsOl.children].forEach((li, i) => {
+    li.classList.toggle("done", !!done[i]);
+    li.classList.toggle("cur", !done[i] && first);
+    if (!done[i]) first = false;
+  });
+}
+STEPS.forEach((s, i) => {
+  const li = document.createElement("li");
+  li.innerHTML = "<input type='checkbox' aria-label='done'" + (done[i] ? " checked" : "") + "><div><div class='t'>" + s.t + "</div><div class='d'>" + s.d + "</div></div>";
+  li.querySelector("input").addEventListener("change", e => {
+    done[i] = e.target.checked;
+    try { localStorage.setItem("uvb-solder-steps", JSON.stringify(done)); } catch (err) {}
+    refreshSteps();
+  });
+  li.querySelector(".t").addEventListener("click", () => { select(s.g); map.scrollIntoView({ behavior: "smooth", block: "center" }); });
+  stepsOl.appendChild(li);
+});
+refreshSteps();
+</script>
+</body>
+</html>
